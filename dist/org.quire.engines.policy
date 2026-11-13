@@ -11,7 +11,7 @@
 -->
 <policyconfig>
   <vendor>quire</vendor>
-  <vendor_url>https://github.com/PoHsuanLai/stoker</vendor_url>
+  <vendor_url>https://github.com/Bardo-DE/stoker</vendor_url>
   <action id="org.quire.engines.install">
     <description>Install an AI engine for everyone</description>
     <message>Authentication is required to install software that runs AI models for everyone on this computer.</message>
