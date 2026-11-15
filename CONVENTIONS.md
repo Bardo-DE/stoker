@@ -1,58 +1,28 @@
 # Conventions
 
-stoker follows the program's shared conventions, whose text lives in quire's `CONVENTIONS.md`
-(identical in quire, sill, shell-host, palmrest, detent and porter): types, traits, effects,
-errors, tests, comments, change discipline, borrowing. Read it first. `ARCHITECTURE.md` here
-adds the crate map, the one-home table, the traits, the recipes and the repo rules; where the
-two disagree, `ARCHITECTURE.md` wins for stoker.
+This repo follows the published Rust guides instead of a house style:
 
-What stoker adds or decides differently, each with its reason (the first four are porter's
-additions, kept so the two repos read alike):
+- [Rust Style Guide](https://doc.rust-lang.org/style-guide/): formatting. `cargo fmt` applies it.
+- [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/): naming, API shape,
+  documentation, interoperability.
+- [Microsoft Pragmatic Rust Guidelines](https://microsoft.github.io/rust-guidelines/): libraries,
+  applications, errors, safety, performance, documentation.
 
-1. **Closed sets are enums without `Word`.** stoker does not depend on quire's `ds-core`: the
-   model layer must build for any desktop and any OS, below the design system. A closed set's
-   stable slug is its serde `snake_case` form (the same slug in catalog files, cassettes and on
-   the wire); nothing hand-writes `slug`, `parse` or `ALL`, and labels a person reads belong to
-   the UI that draws them.
-2. **Async seams use `-> impl Future<Output = ...> + Send`** (return-position `impl Trait`), so
-   implementations write `async fn` and every future can cross a multi-threaded runtime.
-   Behaviour that differs by case is a trait with default methods, overridden where a case
-   differs (`Provider::charges`, `Server` in `model-openai-compat`). Generics by default;
-   `Box<dyn Trait>` or `&dyn Trait` is fine where the implementation is picked from
-   configuration at run time (`Flavor::server`).
-3. **`todo!()` bodies exist only while an interface is frozen and its behaviour is not
-   built.** Each one is listed in `FINDINGS.md` with the work that removes it. This departs from
-   the shared rule "no `todo!()` stub on master"; the freeze decides when it lands.
-4. **Nothing ambient below the daemons.** The clock, the environment, directories, processes,
-   sockets and the GPU are passed in (`MonoMs` as an input, `EnginePaths` from settings, the
-   `EngineHost`, `ReadyProbe` and `GpuProbe` seams); only a daemon that links these crates
-   reads the real thing.
-5. **No dependency on porter.** stoker is portable and sits below porter in the repo order.
-   The one place a stoker type and a porter type meet is porter's `inferd::bridge`; a stoker
-   type that mirrors a porter one (`CatalogKind` for `AiKind`) uses the same slugs and has a
-   total mapping test on the porter side.
-6. **Model and screen text is personal.** A type that holds what the person typed, what a model
-   said or what a screenshot showed writes `Debug` by hand and prints a length, never the
-   content (`TypedText`, `JsonText`, `ImageBytes`, `RequestJson`, `PreparedImage`).
-7. **Parsers are total.** A parser of model output never panics, never evals, and refuses what
-   it does not know: an unknown verb is dropped and reported, an out-of-frame point is refused
-   and never clamped.
-8. **Recorded fixtures come from dev scripts** run by hand against the user's own engine.
-   Nothing in CI generates, records or downloads a model, a weight or a screenshot.
-9. **Speech is personal and its engines stay separate.** What a person said (`PcmBytes`,
-   `Frame512`, `HeardText`) and what a model says aloud (`SpokenText`) follow rule 6; audio is
-   never stored, only digested in cassettes. No GPL code is linked into any crate here: text to
-   speech runs as its own engine process, and `speech-host` links sherpa-onnx built without TTS.
-10. **Lists are plain.** The catalog and its labels rank nothing: no best, recommended or tier
-    wording in a file, a label or a doc comment; a test fails a catalog file that has any.
-11. **Plain types first (2026-10-28).** `bool` is fine for fields, return values, locals and
-    private functions; use an enum only where a public function would read `f(true, false)`, a
-    third state is realistic, or the value is written to disk or the bus and a word reads
-    better. Two-way outcomes are `Result` or `Option`, not a two-arm enum.
-12. **One fact, one type.** No mirror enums across crates; the lower crate owns the set, and a
-    field-less view of an enum is a method. If the type can say it, no runtime check says it, and
-    a single-variant enum is not a type.
-13. **Growing sets are data.** Apps, providers, programs, verbs and window classes are a string
-    id or a shipped file, not a variant list; an enum is for a set the program closes.
-14. **Newtypes only with a rule.** A parsed or validated value, a unit, or an id that must not be
-    mixed with another; otherwise the plain type.
+## Design
+
+On top of the guides, write Rust roughly the way you would write Haskell:
+
+1. **Push IO to the edges.** Decisions live in pure functions: data in, data out, for example
+   `step(state, event) -> (state, effects)`. A thin shell reads the world, calls the core and
+   carries out the effects it returns. No IO, clocks or threads inside the core.
+   See [Functional Core, Imperative Shell](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell)
+   and [sans-IO](https://firezone.dev/blog/sans-io).
+2. **Let types carry the facts.** Parse input once, at the edge, into types that only hold valid
+   values, and don't check again past it. Use enums so impossible states can't be written.
+   See [Parse, don't validate](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/)
+   and [Type-Driven API Design in Rust](https://willcrichton.net/rust-api-type-patterns/).
+3. **Judgement, not rules.** These are directions, not quotas. A `bool`, a `String` or a plain
+   struct is fine when a type would add nothing. Don't add a newtype or a state machine that no
+   bug and no reader needs.
+
+The repo's own structure (crates, layers, where each concept lives) is in ARCHITECTURE.md.
