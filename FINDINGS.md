@@ -23,7 +23,7 @@ Open items and standing facts. An entry names the condition that closes it.
 
 ## Simplification by the new type rules (2026-10-28)
 
-Lane `esto` made the code match CONVENTIONS rules 11 to 14 (the old "no bool, never `dyn`" rules went).
+Lane `esto` made the code match the new type rules (the old "no bool, never `dyn`" rules went).
 Done: `Flavor` keeps its name and serde shape, and what differs per server is now the `Server`
 trait (default methods, one impl per server) in `model-openai-compat/src/server.rs`; the five
 two-way enums and `Quirks` are gone; porter reads the one row it needs through
